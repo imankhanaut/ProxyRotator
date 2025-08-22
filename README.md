@@ -71,3 +71,63 @@ You can also configure the tool via command-line arguments:
     ```bash
     python3 ProxyRotator.py <URL> <inbound port> no_use
     ```
+
+# My Project
+
+This project helps manage and test configurations from a subscription URL. To customize its behavior, you can modify the following variables in the configuration file.
+
+---
+
+### Configuration Variables
+
+**For most users, it's recommended to leave these variables at their default values. Only modify them if you have specific performance or operational requirements.**
+
+| Variable | Description |
+| :--- | :--- |
+| `subscription_url` | The URL of your subscription source. This can be a raw text file or a base64-encoded string. |
+| `listening_socks_port` | The local port used for incoming SOCKS connections. |
+| `subscription_update_time` | The interval, in seconds, for checking the `subscription_url` for new content. |
+| `max_samples_batch` | The maximum number of random configurations to select from the subscription URL for testing in a single batch. |
+| `min_working_configs` | The minimum number of working configurations required. If the number of found working configurations falls below this value, a new batch of configs will be tested immediately. |
+| `url_test_timeout` | The maximum time, in seconds, to wait for a connection to a configuration to determine if it's working. |
+| `config_update_time` | The delay, in seconds, between each individual configuration test. |
+
+
+# Project Configuration Guide
+
+This guide provides detailed information on how to configure the behavior of this project. You can adjust these settings to optimize performance and tailor the application to your specific needs.
+
+---
+
+### Understanding and Modifying Variables
+
+The following variables are central to the project's operation. While we've set them to sensible defaults, advanced users may want to fine-tune them. **If you're not an expert, it's highly recommended you leave them as they are.** Incorrect values can lead to instability or unexpected behavior.
+
+---
+
+### Core Configuration
+
+* `subscription_url`
+    This is the **source of your configurations**. The program fetches its list of potential connections from this URL. The URL can point to a simple text file with each configuration on a new line, or it can contain a **Base64-encoded string**. The program will automatically detect and decode the content if it's Base64.
+    
+* `listening_socks_port`
+    This variable defines the **local port** on which the application will listen for incoming SOCKS proxy connections. When another application on your system wants to use the proxy, it will connect to `127.0.0.1` (localhost) at this specific port. You can change this if the port is already in use by another program.
+    
+* `subscription_update_time`
+    This value, in **seconds**, controls how often the program checks the `subscription_url` for updates. A lower value means the program will check for new configurations more frequently, which can be useful if your subscription list changes often. A higher value reduces network traffic and server load.
+
+---
+
+### Performance Tuning
+
+* `max_samples_batch`
+    To avoid testing every single configuration from a large subscription list, the program tests them in batches. This variable determines the **maximum number of random configurations** to select and test from the subscription list at one time. A larger batch size can find working configurations faster, but it also uses more resources and may be blocked by firewalls.
+    
+* `min_working_configs`
+    This is a critical variable for ensuring a stable connection. It sets the **minimum number of active, working configurations** the program tries to maintain. If the number of working configs drops below this threshold, the program will immediately initiate a new test batch (of size `max_samples_batch`) to find replacements.
+    
+* `url_test_timeout`
+    When the program tests a configuration, it needs to know how long to wait before giving up. This value, in **seconds**, is the **maximum time allowed for a single test connection** to succeed. A lower timeout can speed up the testing process, but it may incorrectly fail configurations from servers that are just a little slow to respond.
+    
+* `config_update_time`
+    This variable, in **seconds**, introduces a **delay between each individual configuration test**. This is a useful setting to prevent overwhelming a server or to avoid being flagged as a bot. It staggers the test requests, making them appear more like organic traffic.
