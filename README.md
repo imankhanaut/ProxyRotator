@@ -15,7 +15,7 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
 1.  **Fetch:** The application retrieves the proxy list from the provided subscription URL.
 2.  **Decode:** If the content is Base64 encoded, it decodes it into plain text.
 3.  **Parse:** Extracts individual proxy configurations (e.g., SOCKS, HTTP) from the text.
-4.  **Test & Save:** Each proxy is tested for connectivity and speed. Only the functional proxies are saved to a `working-configs` file.
+4.  **Test & Save:** Each proxy is tested for connectivity and speed. Only the functional proxies are saved to a database file.
 5.  **Rotate:** When making outbound requests, the application randomly selects a proxy from the validated pool of working configurations.
 
 ## Installation
