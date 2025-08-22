@@ -1,4 +1,4 @@
-# Proxy Rotator
+# Proxy Rotator :rocket:
 
 A lightweight and efficient tool designed to manage and rotate through proxy configurations. It automatically fetches subscription URLs, decodes them (handling both raw text and Base64 encoded formats), and tests the proxies to save only the working ones for fast and reliable internet connectivity.
 
