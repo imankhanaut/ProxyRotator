@@ -29,12 +29,12 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
     ```bash
     pip install -r requirements.txt
     ```
-3.  Copy the xray executable inside dir and make it executable if you are inside linux:
+3.  Copy the xray executable inside dir. If you are inside linux you should make *xray* executable:
     ```bash
     chmod +x xray
     ```
 
-    or if you are inside windows, run setup.bat to copy xray inside the local folder.
+    Moreover, if you are inside windows, run **setup.bat** to copy xray inside the local folder.
 
 
 ## Usage
@@ -56,18 +56,18 @@ You can also configure the tool via command-line arguments:
 
 1. Using a custom URL provided at runtime
 
-```bash
-python ProxyRotator.py <URL>
-```
+    ```bash
+    python3 ProxyRotator.py <URL>
+    ```
 
 3. Specify a custom inbound port
    
-```bash
-python ProxyRotator.py <URL> <inbound port>
-```
+    ```bash
+    python3 ProxyRotator.py <URL> <inbound port>
+    ```
 
 5. Specify not to use the saved configs
 
-```bash
-python ProxyRotator.py <URL> <inbound port> no_use
-```
+    ```bash
+    python3 ProxyRotator.py <URL> <inbound port> no_use
+    ```
