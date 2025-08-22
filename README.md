@@ -72,12 +72,6 @@ You can also configure the tool via command-line arguments:
     python3 ProxyRotator.py <URL> <inbound port> no_use
     ```
 
-# My Project
-
-This project helps manage and test configurations from a subscription URL. To customize its behavior, you can modify the following variables in the configuration file.
-
----
-
 ### Configuration Variables
 
 **For most users, it's recommended to leave these variables at their default values. Only modify them if you have specific performance or operational requirements.**
