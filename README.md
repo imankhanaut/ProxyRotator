@@ -76,15 +76,15 @@ You can also configure the tool via command-line arguments:
 
 **For most users, it's recommended to leave these variables at their default values. Only modify them if you have specific performance or operational requirements.**
 
-    | Variable | Description |
-    | :--- | :--- |
-    | `subscription_url` | The URL of your subscription source. This can be a raw text file or a base64-encoded string. |
-    | `listening_socks_port` | The local port used for incoming SOCKS connections. |
-    | `subscription_update_time` | The interval, in seconds, for checking the `subscription_url` for new content. |
-    | `max_samples_batch` | The maximum number of random configurations to select from the subscription URL for testing in a single batch. |
-    | `min_working_configs` | The minimum number of working configurations required. If the number of found working configurations falls below this value, a new batch of configs will be tested immediately. |
-    | `url_test_timeout` | The maximum time, in seconds, to wait for a connection to a configuration to determine if it's working. |
-    | `config_update_time` | The delay, in seconds, between each individual configuration test. |
+| Variable | Description |
+| :--- | :--- |
+| `subscription_url` | The URL of your subscription source. This can be a raw text file or a base64-encoded string. |
+| `listening_socks_port` | The local port used for incoming SOCKS connections. |
+| `subscription_update_time` | The interval, in seconds, for checking the `subscription_url` for new content. |
+| `max_samples_batch` | The maximum number of random configurations to select from the subscription URL for testing in a single batch. |
+| `min_working_configs` | The minimum number of working configurations required. If the number of found working configurations falls below this value, a new batch of configs will be tested immediately. |
+| `url_test_timeout` | The maximum time, in seconds, to wait for a connection to a configuration to determine if it's working. |
+| `config_update_time` | The delay, in seconds, between each individual configuration test. |
 
 
 ### Understanding and Modifying Variables
