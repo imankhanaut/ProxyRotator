@@ -54,11 +54,20 @@ The default for subscription url is the Mahsa Freenet configs. and default liste
 
 You can also configure the tool via command-line arguments:
 
-# Using a custom URL provided at runtime
+1. Using a custom URL provided at runtime
+
+```bash
 python ProxyRotator.py <URL>
+```
 
-# Specify a custom inbound port
+3. Specify a custom inbound port
+   
+```bash
 python ProxyRotator.py <URL> <inbound port>
+```
 
-# Specify not to use the saved configs
+5. Specify not to use the saved configs
+
+```bash
 python ProxyRotator.py <URL> <inbound port> no_use
+```
