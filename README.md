@@ -120,9 +120,8 @@ The following variables are central to the project's operation. While we've set 
 * `config_update_time`
     This variable, in **seconds**, introduces a **delay between each individual configuration test**. This is a useful setting to prevent overwhelming a server or to avoid being flagged as a bot. It staggers the test requests, making them appear more like organic traffic.
 
-...
 
-## 🎁 Acknowledgments
+## Acknowledgments 🎁
 
 A special thank you to the projects and resources that were instrumental in the development of this project:
 
