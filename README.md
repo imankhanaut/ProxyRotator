@@ -2,7 +2,7 @@
 
 A lightweight and efficient tool designed to manage and rotate through proxy configurations. It automatically fetches subscription URLs, decodes them (handling both raw text and Base64 encoded formats), and tests the proxies to save only the working ones for fast and reliable internet connectivity.
 
-## Features
+## Features :memo:
 
 -   **Automatic Subscription Fetching:** Fetches proxy lists from subscription URLs.
 -   **Base64 Decoding:** Automatically detects and decodes Base64 encoded subscription content.
@@ -10,7 +10,7 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
 -   **Health Checking:** Tests and validates proxies, saving only the working configurations to a dedicated list.
 -   **Persistence:** Maintains a persistent list of working proxies to ensure fast connection times on subsequent runs.
 
-## How It Works
+## How It Works :sparkles:
 
 1.  **Fetch:** The application retrieves the proxy list from the provided subscription URL.
 2.  **Decode:** If the content is Base64 encoded, it decodes it into plain text.
@@ -18,7 +18,7 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
 4.  **Test & Save:** Each proxy is tested for connectivity and speed. Only the functional proxies are saved to a database file.
 5.  **Rotate:** When making outbound requests, the application randomly selects a proxy from the validated pool of working configurations.
 
-## Installation
+## Installation :book:
 
 1.  Clone this repository:
     ```bash
@@ -39,7 +39,7 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
 
 ## Usage
 
-### Basic Setup
+### Basic Setup :truck:
 
 1.  Inside the ProxyRotator.py file, you can change the subscription url with subscription_url and listening port with listening_socks_port.
 The default for subscription url is the Mahsa Freenet configs. and default listening port is 7590.
@@ -72,7 +72,7 @@ You can also configure the tool via command-line arguments:
     python3 ProxyRotator.py <URL> <inbound port> no_use
     ```
 
-### Configuration Variables
+### Configuration Variables :wrench:
 
 **For most users, it's recommended to leave these variables at their default values. Only modify them if you have specific performance or operational requirements.**
 
@@ -87,7 +87,7 @@ You can also configure the tool via command-line arguments:
 | `config_update_time` | The delay, in seconds, between each individual configuration test. |
 
 
-### Understanding and Modifying Variables
+### Understanding and Modifying Variables 
 
 The following variables are central to the project's operation. While we've set them to sensible defaults, advanced users may want to fine-tune them. **If you're not an expert, it's highly recommended you leave them as they are.** Incorrect values can lead to instability or unexpected behavior.
 
@@ -106,7 +106,7 @@ The following variables are central to the project's operation. While we've set 
 
 ---
 
-### Performance Tuning
+### Performance Tuning :zap:
 
 * `max_samples_batch`
     To avoid testing every single configuration from a large subscription list, the program tests them in batches. This variable determines the **maximum number of random configurations** to select and test from the subscription list at one time. A larger batch size can find working configurations faster, but it also uses more resources and may be blocked by firewalls.
