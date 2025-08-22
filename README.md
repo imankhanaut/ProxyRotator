@@ -87,12 +87,6 @@ You can also configure the tool via command-line arguments:
 | `config_update_time` | The delay, in seconds, between each individual configuration test. |
 
 
-# Project Configuration Guide
-
-This guide provides detailed information on how to configure the behavior of this project. You can adjust these settings to optimize performance and tailor the application to your specific needs.
-
----
-
 ### Understanding and Modifying Variables
 
 The following variables are central to the project's operation. While we've set them to sensible defaults, advanced users may want to fine-tune them. **If you're not an expert, it's highly recommended you leave them as they are.** Incorrect values can lead to instability or unexpected behavior.
