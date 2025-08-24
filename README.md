@@ -23,7 +23,7 @@ A lightweight and efficient tool designed to manage and rotate through proxy con
 1.  Clone this repository:
     ```bash
     git clone https://github.com/imankhanaut/ProxyRotator.git
-    cd proxy-rotator
+    cd ProxyRotator
     ```
 2.  Install the required dependencies:
     ```bash
