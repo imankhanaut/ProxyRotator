@@ -14,6 +14,7 @@ max_samples_batch = 30
 min_working_configs = 3
 url_test_timeout = 3
 config_update_time = 20
+apply_fragment = True
 ####################################
 THRD_LOCK = threading.Lock()
 INTERRUPT_EVENT = threading.Event()
@@ -30,7 +31,9 @@ bestPing = sys.float_info.max
 first_time_to_connect = True
 treasury_filename = "treasury.db"
 use_only_subscription = ""
-
+fragment_nterval = "1-5"
+fragment_length = "1-5"
+fragment_packets = "tlshello"
 ####################################
 sys.stdin.reconfigure(encoding="utf-8")
 sys.stdout.reconfigure(encoding="utf-8")
@@ -436,6 +439,7 @@ class OutboundBean:
             self.peers = peers
 
     class StreamSettingsBean:
+
         class TcpSettingsBean:
             class HeaderBean:
                 class RequestBean:
@@ -1223,12 +1227,20 @@ def try_resolve_resolve_sip002(str: str, config: OutboundBean):
 
 
 def get_outbound1():
+    global apply_fragment, fragment_nterval, fragment_length, fragment_packets
+    settings = OutboundBean.OutSettingsBean(
+        domainStrategy=DomainStrategy.UseIp,
+    )
+    if apply_fragment:
+        settings.fragment = {
+            "interval": fragment_nterval,
+            "length": fragment_length,
+            fragment_packets: "tlshello",
+        }
     outbound1 = OutboundBean(
         tag="direct",
         protocol=EConfigType.FREEDOM.protocolName,
-        settings=OutboundBean.OutSettingsBean(
-            domainStrategy=DomainStrategy.UseIp,
-        ),
+        settings=settings,
         mux=None,
     )
     return outbound1
