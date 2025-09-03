@@ -1,9 +1,10 @@
 import json, base64, random, re, sys, threading, time, os, base64, requests
-import json, time, socket, socks, shutil, platform
+import json, time, socket, socks, shutil, platform, argparse
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 from urllib.parse import unquote
 from subprocess import Popen, PIPE
+
 
 ####################################
 subscription_url = "https://raw.githubusercontent.com/MahsaNetConfigTopic/config/refs/heads/main/xray_final.txt"
@@ -14,7 +15,7 @@ max_samples_batch = 30
 min_working_configs = 3
 url_test_timeout = 3
 config_update_time = 20
-apply_fragment = True
+apply_fragment = False
 ####################################
 THRD_LOCK = threading.Lock()
 INTERRUPT_EVENT = threading.Event()
@@ -29,9 +30,10 @@ HTTP = "http"
 working_urls_with_pingTime = {}
 bestPing = sys.float_info.max
 first_time_to_connect = True
+listen_to_any = False
 treasury_filename = "treasury.db"
 use_only_subscription = ""
-fragment_nterval = "1-5"
+fragment_interval = "1-5"
 fragment_length = "1-5"
 fragment_packets = "tlshello"
 ####################################
@@ -98,7 +100,7 @@ def save_unique_dict_values_to_file(dictionary, filename):
     # Step 2: Read existing values from file (if it exists)
     existing_values = set()
     try:
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8", errors="ignore") as f:
             existing_values = set(line.strip() for line in f if line.strip())
     except FileNotFoundError:
         pass  # File doesn't exist yet, we'll create it
@@ -108,7 +110,7 @@ def save_unique_dict_values_to_file(dictionary, filename):
 
     # Step 4: Append new values to the file
     if new_values:
-        with open(filename, "a", encoding="utf-8", errors="surrogateescape") as f:
+        with open(filename, "a", encoding="utf-8", errors="ignore") as f:
             for value in new_values:
                 # Convert to string in case values aren't strings
                 f.write(f"{str(value)}\n")
@@ -133,7 +135,7 @@ def create_dict_from_file(filename, constant_value=50000):
     result_dict = {}
 
     try:
-        with open(filename, "r") as f:
+        with open(filename, "r", errors="ignore") as f:
             for line in f:
                 # Strip whitespace and skip empty lines
                 value = line.strip()
@@ -1125,7 +1127,7 @@ def get_inbound(port):
         tag="in_proxy",
         port=port,
         protocol=EConfigType.SOCKS.protocolName,
-        listen="127.0.0.1",
+        listen="127.0.0.1" if not listen_to_any else "0.0.0.0",
         settings=InboundBean.InSettingsBean(
             auth="noauth",
             udp=True,
@@ -1227,15 +1229,15 @@ def try_resolve_resolve_sip002(str: str, config: OutboundBean):
 
 
 def get_outbound1():
-    global apply_fragment, fragment_nterval, fragment_length, fragment_packets
+    global apply_fragment, fragment_interval, fragment_length, fragment_packets
     settings = OutboundBean.OutSettingsBean(
         domainStrategy=DomainStrategy.UseIp,
     )
     if apply_fragment:
         settings.fragment = {
-            "interval": fragment_nterval,
+            "interval": fragment_interval,
             "length": fragment_length,
-            fragment_packets: "tlshello",
+            "packets": fragment_packets,
         }
     outbound1 = OutboundBean(
         tag="direct",
@@ -1586,7 +1588,10 @@ def decode_if_base64(content):
 
 def get_content_from_url(url):
     try:
-        response = requests.get(url, timeout=5)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0"
+        }
+        response = requests.get(url, timeout=5, headers=headers)
         response.raise_for_status()
         content = response.text
         return decode_if_base64(content)
@@ -1710,7 +1715,7 @@ def extract_working_urls(subscription_url):
         connection_count = 0
         for config in list_of_lines:
             cnt += 1
-            print(f"Testing config {cnt} out of {len(list_of_lines)}.")
+            print(f"Testing config {cnt} out of {len(list_of_lines)} random configs.")
             thread = threading.Thread(
                 target=test_config_url,
                 args=(config,),
@@ -1870,10 +1875,12 @@ def run_config_calculate_ping(url) -> float:
     for line in iter(current_process.stdout.readline, ""):
         if "Reading config" in line.decode("utf-8").strip():
             break  # Remove if you want to continue monitoring
-    remove_file(tmpName)
+
     pingtime = httping_via_socks(proxy_port=port)
     test_conn = test_socks_connection(port=port)
     current_process.terminate()
+    time.sleep(0.1)
+    remove_file(tmpName)
     if not test_conn:
         return -1
     return pingtime
@@ -1925,6 +1932,35 @@ def clear_files_in_slprj(folder_path):
 
 ######################################
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="A lightweight and efficient tool designed to manage and rotate through proxy configurations. It automatically fetches subscription URLs, decodes them (handling both raw text and Base64 encoded formats), and tests the proxies to save only the working ones for fast and reliable internet connectivity.",
+        epilog="Example: python ProxyRotator.py -u <URL> -p <inbound port>",
+    )
+    parser.add_argument(
+        "--URL", "-u", default=subscription_url, help="Subscription URL."
+    )
+
+    parser.add_argument(
+        "--Fragment",
+        action="store_true",
+        default=apply_fragment,
+        help="Enable fFagment.",
+    )
+    parser.add_argument(
+        "--Port",
+        "-p",
+        type=int,
+        default=listening_socks_port,
+        help="Socks Listening Port.",
+    )
+    parser.add_argument(
+        "--NoMemory", action="store_true", help="Do not use the saved configs."
+    )
+    args = parser.parse_args()
+
+    if args.Fragment:
+        apply_fragment = True
+
     if not find_xray():
         print("Please copy xray and make it executable inside the path.")
         exit()
@@ -1932,20 +1968,11 @@ if __name__ == "__main__":
     clear_files_in_slprj(folder_path="slprj")
     if not os.path.exists("slprj"):
         os.mkdir("slprj")
-    if len(sys.argv) < 3:
-        print("Usage: python script.py <URL> <inbound port>")
 
-    else:
-        try:
-            subscription_url = sys.argv[1]
-            listening_socks_port = int(sys.argv[2])
-            use_only_subscription = sys.argv[3]
-        except:
-            pass
-
-    if "use" not in use_only_subscription:
+    if not args.NoMemory:
         working_urls_with_pingTime = create_dict_from_file(treasury_filename)
     print(f"URL received: {subscription_url}")
+    #########
     thread1 = threading.Thread(target=extract_working_urls, args=(subscription_url,))
     thread2 = threading.Thread(
         target=connect_to_working_urls, args=(listening_socks_port,)
