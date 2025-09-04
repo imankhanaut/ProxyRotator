@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE
 ####################################
 subscription_url = "https://raw.githubusercontent.com/MahsaNetConfigTopic/config/refs/heads/main/xray_final.txt"
 listening_socks_port = 7590
-subscription_update_time = 300
+subscription_update_time = 3600
 ####################################
 max_samples_batch = 30
 min_working_configs = 3
@@ -36,6 +36,7 @@ use_only_subscription = ""
 fragment_interval = "1-5"
 fragment_length = "10-50"
 fragment_packets = "tlshello"
+_black_list = []
 ####################################
 sys.stdin.reconfigure(encoding="utf-8")
 sys.stdout.reconfigure(encoding="utf-8")
@@ -129,6 +130,7 @@ def save_unique_dict_values_to_file(dictionary, filename):
         dictionary (dict): The dictionary whose values should be saved
         filename (str): Path to the file where values should be stored
     """
+    global _black_list
     dict_values = set(dictionary.keys())
     existing_values = set()
     try:
@@ -146,7 +148,8 @@ def save_unique_dict_values_to_file(dictionary, filename):
             try:
                 _lines = f.readlines()
                 _lines = [line.strip() for line in _lines]
-                lines.extend(_lines)
+                if _lines not in _black_list:
+                    lines.extend(_lines)
             except:
                 pass
             for item in lines:
@@ -1764,15 +1767,12 @@ def extract_working_urls(subscription_url):
         while connection_count < 1:
             time.sleep(0.5)
         with THRD_LOCK:
-            working_urls_with_pingTime.update(new_urls_with_pingTimes)
-            working_urls_with_pingTime = sort_configs_by_ping(
-                working_urls_with_pingTime
-            )
+            update_sort_dict(working_urls_with_pingTime, new_urls_with_pingTimes)
         #######update others gently
         while connection_count < len(list_of_lines):
             time.sleep(0.5)
         with THRD_LOCK:
-            working_urls_with_pingTime.update(new_urls_with_pingTimes)
+            update_sort_dict(working_urls_with_pingTime, new_urls_with_pingTimes)
             if not do_not_save_configs:
                 save_unique_dict_values_to_file(
                     working_urls_with_pingTime, treasury_filename
@@ -1788,13 +1788,15 @@ def extract_working_urls(subscription_url):
         if len(new_urls_with_pingTimes) < min_working_configs:
             time.sleep(1)
         else:
-            _subscription_update_time = subscription_update_time * (
-                1 if len(working_urls_with_pingTime) < 5 else 5
-            )
-            print(f"Waiting for {_subscription_update_time} seconds to referesh URL.")
-            sleepInterrupt(
-                _subscription_update_time
-            )  # if interrupt, then wake from sleep
+            print(f"Waiting for {subscription_update_time} seconds to referesh URL.")
+            sleepInterrupt(subscription_update_time)
+
+
+def update_sort_dict(working_urls_with_pingTime, new_urls_with_pingTimes):
+    working_urls_with_pingTime.update(new_urls_with_pingTimes)
+    working_urls_with_pingTime = sort_configs_by_ping(
+        working_urls_with_pingTime
+    )  # if interrupt, then wake from sleep
 
 
 def sleepInterrupt(seconds):
@@ -1813,7 +1815,7 @@ class BreakOuterLoop(Exception):
 
 def connect_to_working_urls(inbound_port):
     global bestPing, first_time_to_connect, working_urls_with_pingTime, config_update_time
-    global INTERRUPT_EVENT
+    global INTERRUPT_EVENT, _black_list
     current_process = None
     # seconds
     while len(working_urls_with_pingTime) < 1:
@@ -1840,13 +1842,15 @@ def connect_to_working_urls(inbound_port):
 
                 while True:
                     pingTime = httping_via_socks(proxy_port=inbound_port)
-
+                    update_sort_dict(
+                        working_urls_with_pingTime, {config_to_connect: pingTime}
+                    )
                     config_to_connect, bestPing = next(
                         iter(working_urls_with_pingTime.items())
                     )
-                    print(
-                        f"Best ping in list is : {bestPing} and current ping is {pingTime}."
-                    )
+                    # print(
+                    #     f"Best ping in list is : {bestPing} and current ping is {pingTime}."
+                    # )
                     if pingTime - bestPing > 500:
                         print(
                             f"Better connection found with ping {bestPing}  - moving to it {config_to_connect[:20]}!"
@@ -1854,7 +1858,7 @@ def connect_to_working_urls(inbound_port):
                         break
                     if test_socks_connection(port=inbound_port) and pingTime > 0:
                         print(
-                            f"Connection working with {config_to_connect[:20]} and ping time is {pingTime} - will check again in {config_update_time} seconds"
+                            f"Connection working with {config_to_connect[:20]} and ping time is {pingTime:.2f} - will check again in {config_update_time} seconds"
                         )
                         time.sleep(config_update_time)  # Wait 20 seconds
 
@@ -1865,6 +1869,7 @@ def connect_to_working_urls(inbound_port):
                         working_urls_with_pingTime.pop(
                             config_to_connect, "Config Not Found!"
                         )
+                        _black_list.extend(config_to_connect)
                         if len(working_urls_with_pingTime) == 0:
                             print(
                                 "Interrupting other thread to restart URL fetching and waiting for 3 seconds..."
@@ -2009,7 +2014,31 @@ def clear_files_in_slprj(folder_path):
 
 
 ######################################
-if __name__ == "__main__":
+def check_init_files():
+    if not find_xray():
+        print("Please copy xray and make it executable inside the path.")
+        exit()
+    #########
+    clear_files_in_slprj(folder_path="slprj")
+    if not os.path.exists("slprj"):
+        os.mkdir("slprj")
+
+
+def run_Main_Threads():
+    thread1 = threading.Thread(target=extract_working_urls, args=(subscription_url,))
+    thread2 = threading.Thread(
+        target=connect_to_working_urls, args=(listening_socks_port,)
+    )
+    thread1.start()
+    thread2.start()
+    # Wait for both threads to complete
+    thread1.join()
+    thread2.join()
+
+
+def arguments_Check():
+    global subscription_url, listening_socks_port, apply_fragment, treasury_filename
+    global working_urls_with_pingTime, listen_to_any, do_not_save_configs, THRD_LOCK
     parser = argparse.ArgumentParser(
         description="A lightweight and efficient tool designed to manage and rotate through proxy configurations. It automatically fetches subscription URLs, decodes them (handling both raw text and Base64 encoded formats), and tests the proxies to save only the working ones for fast and reliable internet connectivity.",
         epilog="Example: python ProxyRotator.py -u <URL> -p <inbound port>",
@@ -2044,13 +2073,15 @@ if __name__ == "__main__":
     listening_socks_port = args.Port
     do_not_save_configs = args.NoSave
     subscription_url = args.URL
+    apply_fragment = args.Fragment
+    #######
     if listen_to_any:
         print("Listening to 0.0.0.0")
-    if args.Fragment:
+    if apply_fragment:
         print("Fragment activated.")
-        apply_fragment = True
 
     print(f"Listening port is {listening_socks_port}")
+    print(f"URL received: {subscription_url}")
 
     if do_not_save_configs:
         print("Not saving configs.")
@@ -2059,26 +2090,13 @@ if __name__ == "__main__":
         print("Using saved configs to speed up!")
         temp = create_dict_from_file(treasury_filename)
         keys_random = random.sample(list(temp.keys()), len(temp))
-        working_urls_with_pingTime = {key: temp[key] for key in keys_random}
+        with THRD_LOCK:
+            working_urls_with_pingTime = {key: temp[key] for key in keys_random}
     else:
-        print("Not using saved configs!")
-    #################################################
-    if not find_xray():
-        print("Please copy xray and make it executable inside the path.")
-        exit()
-    #########
-    clear_files_in_slprj(folder_path="slprj")
-    if not os.path.exists("slprj"):
-        os.mkdir("slprj")
+        print("Not using saved configs from last execution.")
 
-    print(f"URL received: {subscription_url}")
-    #########
-    thread1 = threading.Thread(target=extract_working_urls, args=(subscription_url,))
-    thread2 = threading.Thread(
-        target=connect_to_working_urls, args=(listening_socks_port,)
-    )
-    thread1.start()
-    thread2.start()
-    # Wait for both threads to complete
-    thread1.join()
-    thread2.join()
+
+if __name__ == "__main__":
+    arguments_Check()
+    check_init_files()
+    run_Main_Threads()
