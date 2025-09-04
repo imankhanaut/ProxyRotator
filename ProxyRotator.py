@@ -129,10 +129,7 @@ def save_unique_dict_values_to_file(dictionary, filename):
         dictionary (dict): The dictionary whose values should be saved
         filename (str): Path to the file where values should be stored
     """
-    # Step 1: Get all unique values from the dictionary
     dict_values = set(dictionary.keys())
-
-    # Step 2: Read existing values from file (if it exists)
     existing_values = set()
     try:
         with open(filename, "r", encoding="utf-8", errors="ignore") as f:
@@ -140,15 +137,21 @@ def save_unique_dict_values_to_file(dictionary, filename):
     except FileNotFoundError:
         pass  # File doesn't exist yet, we'll create it
 
-    # Step 3: Find new values that aren't already in the file
     new_values = dict_values - existing_values
 
-    # Step 4: Append new values to the file
     if new_values:
+        lines = list(new_values)
+        lines = [line.strip() for line in lines]
         with open(filename, "a", encoding="utf-8", errors="ignore") as f:
-            for value in new_values:
-                # Convert to string in case values aren't strings
-                f.write(f"{str(value)}\n")
+            try:
+                _lines = f.readlines()
+                _lines = [line.strip() for line in _lines]
+                lines.extend(_lines)
+            except:
+                pass
+            for item in lines:
+                f.write(f"{item}\n")
+
         print(f"Added {len(new_values)} new values to {filename}")
     else:
         print("No new values to add - all values already exist in the file")
@@ -1730,7 +1733,7 @@ new_urls_with_pingTimes = {}
 
 
 def extract_working_urls(subscription_url):
-    global working_urls_with_pingTime, connection_count
+    global working_urls_with_pingTime, connection_count, do_not_save_configs
     while True:
         new_urls_with_pingTimes.clear()
         content = get_content_from_url(subscription_url)
@@ -1770,9 +1773,10 @@ def extract_working_urls(subscription_url):
             time.sleep(0.5)
         with THRD_LOCK:
             working_urls_with_pingTime.update(new_urls_with_pingTimes)
-            save_unique_dict_values_to_file(
-                working_urls_with_pingTime, treasury_filename
-            )
+            if not do_not_save_configs:
+                save_unique_dict_values_to_file(
+                    working_urls_with_pingTime, treasury_filename
+                )
         #####
         if len(new_urls_with_pingTimes) >= 1:
             print(
@@ -1784,9 +1788,12 @@ def extract_working_urls(subscription_url):
         if len(new_urls_with_pingTimes) < min_working_configs:
             time.sleep(1)
         else:
-            print(f"Waiting for {subscription_update_time} seconds to referesh URL.")
+            _subscription_update_time = subscription_update_time * (
+                1 if len(working_urls_with_pingTime) < 5 else 5
+            )
+            print(f"Waiting for {_subscription_update_time} seconds to referesh URL.")
             sleepInterrupt(
-                subscription_update_time
+                _subscription_update_time
             )  # if interrupt, then wake from sleep
 
 
@@ -1795,6 +1802,7 @@ def sleepInterrupt(seconds):
     for i in range(0, seconds):  # Check if interrupted
         if INTERRUPT_EVENT.is_set():
             INTERRUPT_EVENT = threading.Event()
+            INTERRUPT_EVENT.clear()
             break
         INTERRUPT_EVENT.wait(1)  # Sleep but check for interruption
 
@@ -2029,16 +2037,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "--AnyLan", action="store_true", help="Listen to any inbound connection."
     )
+    parser.add_argument("--NoSave", action="store_true", help="Do not save confgis.")
+    ##
     args = parser.parse_args()
     listen_to_any = args.AnyLan
-    if args.Fragment:
-        print("Fragment activated")
-        apply_fragment = True
     listening_socks_port = args.Port
+    do_not_save_configs = args.NoSave
     subscription_url = args.URL
+    if listen_to_any:
+        print("Listening to 0.0.0.0")
+    if args.Fragment:
+        print("Fragment activated.")
+        apply_fragment = True
+
+    print(f"Listening port is {listening_socks_port}")
+
+    if do_not_save_configs:
+        print("Not saving configs.")
+
     if not args.NoMemory:
         print("Using saved configs to speed up!")
-        working_urls_with_pingTime = create_dict_from_file(treasury_filename)
+        temp = create_dict_from_file(treasury_filename)
+        keys_random = random.sample(list(temp.keys()), len(temp))
+        working_urls_with_pingTime = {key: temp[key] for key in keys_random}
     else:
         print("Not using saved configs!")
     #################################################
