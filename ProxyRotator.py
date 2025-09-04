@@ -74,6 +74,41 @@ def find_xray():
     return None
 
 
+from typing import Any, Callable
+
+
+######################
+def run_with_timeout(func: Callable, timeout: float, *args, **kwargs) -> Any:
+    """
+    Run a function with a timeout. Returns -1 if timeout is reached, else returns the function's result.
+
+    Args:
+        func: The function to run.
+        timeout: Timeout in seconds.
+        *args: Positional arguments to pass to the function.
+        **kwargs: Keyword arguments to pass to the function.
+
+    Returns:
+        The function's return value or -1 if timeout is reached.
+    """
+    result = [-1]  # Use a list to allow modification in thread
+    event = threading.Event()
+
+    def wrapper():
+        try:
+            result[0] = func(*args, **kwargs)
+        finally:
+            event.set()  # Signal that the function has completed
+
+    thread = threading.Thread(target=wrapper)
+    thread.daemon = True  # Daemon thread to avoid hanging on exit
+    thread.start()
+
+    if not event.wait(timeout):  # Wait for the function to complete or timeout
+        return -1
+    return result[0]
+
+
 ####################################
 import builtins
 
@@ -1809,9 +1844,10 @@ def connect_to_working_urls(inbound_port):
                         )
                         if len(working_urls_with_pingTime) == 0:
                             print(
-                                "Interrupting other thread to restart URL fetching..."
+                                "Interrupting other thread to restart URL fetching and waiting for 3 seconds..."
                             )
                             INTERRUPT_EVENT.set()  # Signal interruption
+                        time.sleep(3)
                         break
         except BreakOuterLoop:
             pass  # going to second upper loop
@@ -1837,22 +1873,14 @@ def openXray_waitToConnect(inbound_port, current_process: Popen, configJSON):
         stdout=PIPE,
         stderr=PIPE,
     )
-    for line in iter(current_process.stdout.readline, ""):
-        if "Reading config" in line.decode("utf-8").strip():
-            break
+    result = run_with_timeout(
+        read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
+    )
+    # read_alive_message_from_xray(current_process)
+    time.sleep(0.1)
+    if result == -1:
+        raise Exception("Timeout reading xray output in command line.")
     return current_process
-
-
-def play_firstTime_sound():
-    global first_time_to_connect
-    try:  # connected sound
-        if first_time_to_connect:
-            import winsound
-
-            winsound.MessageBeep()
-            first_time_to_connect = False
-    except Exception as e:
-        print(f"err {e}")
 
 
 def run_config_calculate_ping(url) -> float:
@@ -1872,9 +1900,15 @@ def run_config_calculate_ping(url) -> float:
         [f"{nt_unix}xray", "run", "-c", tmpName], stdout=PIPE, stderr=PIPE
     )
 
-    for line in iter(current_process.stdout.readline, ""):
-        if "Reading config" in line.decode("utf-8").strip():
-            break  # Remove if you want to continue monitoring
+    result = run_with_timeout(
+        read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
+    )
+
+    if result == -1:
+        print("Reading xray output timeout reached!")
+        current_process.terminate()
+        remove_file(tmpName)
+        return -1
 
     pingtime = httping_via_socks(proxy_port=port)
     test_conn = test_socks_connection(port=port)
@@ -1884,6 +1918,25 @@ def run_config_calculate_ping(url) -> float:
     if not test_conn:
         return -1
     return pingtime
+
+
+def read_alive_message_from_xray(process):
+    for line in iter(process.stdout.readline, ""):
+        if "Reading config" in line.decode("utf-8").strip():
+            break
+    return 0
+
+
+def play_firstTime_sound():
+    global first_time_to_connect
+    try:  # connected sound
+        if first_time_to_connect:
+            import winsound
+
+            winsound.MessageBeep()
+            first_time_to_connect = False
+    except Exception as e:
+        print(f"err {e}")
 
 
 def sort_configs_by_ping(configs):
@@ -1956,11 +2009,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--NoMemory", action="store_true", help="Do not use the saved configs."
     )
+    parser.add_argument(
+        "--AnyLan", action="store_true", help="Listen to any inbound connection."
+    )
     args = parser.parse_args()
-
+    listen_to_any = args.AnyLan
     if args.Fragment:
+        print("Fragment activated")
         apply_fragment = True
-
+    listening_socks_port = args.Port
+    subscription_url = args.URL
+    if not args.NoMemory:
+        print("Using saved configs to speed up!")
+        working_urls_with_pingTime = create_dict_from_file(treasury_filename)
+    else:
+        print("Not using saved configs!")
+    #################################################
     if not find_xray():
         print("Please copy xray and make it executable inside the path.")
         exit()
@@ -1969,8 +2033,6 @@ if __name__ == "__main__":
     if not os.path.exists("slprj"):
         os.mkdir("slprj")
 
-    if not args.NoMemory:
-        working_urls_with_pingTime = create_dict_from_file(treasury_filename)
     print(f"URL received: {subscription_url}")
     #########
     thread1 = threading.Thread(target=extract_working_urls, args=(subscription_url,))
