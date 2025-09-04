@@ -154,7 +154,7 @@ def save_unique_dict_values_to_file(dictionary, filename):
                 pass
             for item in lines:
                 f.write(f"{item}\n")
-
+        _black_list = []
         print(f"Added {len(new_values)} new values to {filename}")
     else:
         print("No new values to add - all values already exist in the file")
