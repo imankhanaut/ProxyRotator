@@ -34,7 +34,7 @@ listen_to_any = False
 treasury_filename = "treasury.db"
 use_only_subscription = ""
 fragment_interval = "1-5"
-fragment_length = "1-5"
+fragment_length = "10-50"
 fragment_packets = "tlshello"
 ####################################
 sys.stdin.reconfigure(encoding="utf-8")
@@ -1762,6 +1762,9 @@ def extract_working_urls(subscription_url):
             time.sleep(0.5)
         with THRD_LOCK:
             working_urls_with_pingTime.update(new_urls_with_pingTimes)
+            working_urls_with_pingTime = sort_configs_by_ping(
+                working_urls_with_pingTime
+            )
         #######update others gently
         while connection_count < len(list_of_lines):
             time.sleep(0.5)
@@ -1829,6 +1832,18 @@ def connect_to_working_urls(inbound_port):
 
                 while True:
                     pingTime = httping_via_socks(proxy_port=inbound_port)
+
+                    config_to_connect, bestPing = next(
+                        iter(working_urls_with_pingTime.items())
+                    )
+                    print(
+                        f"Best ping in list is : {bestPing} and current ping is {pingTime}."
+                    )
+                    if pingTime - bestPing > 500:
+                        print(
+                            f"Better connection found with ping {bestPing}  - moving to it {config_to_connect[:20]}!"
+                        )
+                        break
                     if test_socks_connection(port=inbound_port) and pingTime > 0:
                         print(
                             f"Connection working with {config_to_connect[:20]} and ping time is {pingTime} - will check again in {config_update_time} seconds"
@@ -1942,6 +1957,7 @@ def play_firstTime_sound():
 def sort_configs_by_ping(configs):
     configs = {k: v for k, v in configs.items() if v >= 0}
     configs = dict(sorted(configs.items(), key=lambda item: item[1]))
+    # print(configs)
     return configs
 
 
@@ -1952,6 +1968,7 @@ def test_config_url(url):
     if pingtime > 0:
         with THRD_LOCK:
             new_urls_with_pingTimes[url] = pingtime
+            # print(f"new url with ping time {url} : {pingtime}")
     else:
         return False
     return True
