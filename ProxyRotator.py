@@ -7,7 +7,7 @@ from subprocess import Popen, PIPE
 
 
 ####################################
-subscription_url = "https://raw.githubusercontent.com/MahsaNetConfigTopic/config/refs/heads/main/xray_final.txt"
+subscription_url = "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
 listening_socks_port = 7590
 subscription_update_time = 3600
 ####################################
@@ -1749,14 +1749,18 @@ def extract_working_urls(subscription_url):
         print("Searching for working url config inside all configs.")
         list_of_lines = content.splitlines()
         list_of_lines = [item for item in list_of_lines if item]
+        number_of_config_url = len(list_of_lines)
         list_of_lines = random.sample(
             list_of_lines, min(max_samples_batch, len(list_of_lines))
         )
+
         cnt = 0
         connection_count = 0
         for config in list_of_lines:
             cnt += 1
-            print(f"Testing config {cnt} out of {len(list_of_lines)} random configs.")
+            print(
+                f"Testing config number {cnt} out of {len(list_of_lines)} random configs of {number_of_config_url} total."
+            )
             thread = threading.Thread(
                 target=test_config_url,
                 args=(config,),
