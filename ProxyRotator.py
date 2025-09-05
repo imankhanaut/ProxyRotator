@@ -7,9 +7,7 @@ from subprocess import Popen, PIPE
 
 
 ####################################
-# subscription_url = "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
-subscription_url = "http://37.32.9.181:8000/multiurl.php?urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt&urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vmess.txt&urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/shadowsocks.txt"
-
+subscription_url = "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
 listening_socks_port = 7590
 subscription_update_time = 3600
 ####################################
@@ -1984,7 +1982,7 @@ def test_config_url(url):
     global new_urls_with_pingTimes, connection_count
 
     pingtime = run_with_timeout(
-        run_config_calculate_ping, timeout=url_test_timeout, url=url
+        run_config_calculate_ping, timeout=url_test_timeout * 3, url=url
     )
 
     # pingtime = run_config_calculate_ping(url)
