@@ -7,7 +7,9 @@ from subprocess import Popen, PIPE
 
 
 ####################################
-subscription_url = "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
+# subscription_url = "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
+subscription_url = "http://37.32.9.181:8000/multiurl.php?urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt&urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vmess.txt&urls[]=https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/shadowsocks.txt"
+
 listening_socks_port = 7590
 subscription_update_time = 3600
 ####################################
@@ -1862,7 +1864,7 @@ def connect_to_working_urls(inbound_port):
                         break
                     if test_socks_connection(port=inbound_port) and pingTime > 0:
                         print(
-                            f"Connection working with {config_to_connect[:20]} and ping time is {pingTime:.2f} - will check again in {config_update_time} seconds"
+                            f"Connection working with {config_to_connect[:20]} and ping time is {pingTime:.3f} - will check again in {config_update_time} seconds"
                         )
                         time.sleep(config_update_time)  # Wait 20 seconds
 
@@ -1980,7 +1982,12 @@ def sort_configs_by_ping(configs):
 
 def test_config_url(url):
     global new_urls_with_pingTimes, connection_count
-    pingtime = run_config_calculate_ping(url)
+
+    pingtime = run_with_timeout(
+        run_config_calculate_ping, timeout=url_test_timeout, url=url
+    )
+
+    # pingtime = run_config_calculate_ping(url)
     connection_count += 1
     if pingtime > 0:
         with THRD_LOCK:
@@ -2033,6 +2040,9 @@ def run_Main_Threads():
     thread2 = threading.Thread(
         target=connect_to_working_urls, args=(listening_socks_port,)
     )
+    thread1.daemon = True
+    thread2.daemon = True
+
     thread1.start()
     thread2.start()
     # Wait for both threads to complete
