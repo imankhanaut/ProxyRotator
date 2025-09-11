@@ -13,7 +13,7 @@ subscription_update_time = 3600
 ####################################
 max_samples_batch = 30
 min_working_configs = 3
-url_test_timeout = 3
+url_test_timeout = 10
 config_update_time = 20
 apply_fragment = False
 ####################################
@@ -1641,22 +1641,22 @@ def get_content_from_url(url):
         return None
 
 
-def is_port_free(port):
-    """Check if a port is free by trying to bind to it."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.bind(("", port))  # Try to bind to all interfaces
-            return True
-        except socket.error:
-            return False
-
-
 def get_random_free_port(min_port=1024, max_port=65535):
+    def is_port_free(port):
+        """Check if a port is free by trying to bind to it."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("", port))  # Try to bind to all interfaces
+                return True
+            except socket.error:
+                return False
+
     """Get a random free port between min_port and max_port."""
     while True:
         port = random.randint(min_port, max_port)
         if is_port_free(port):
             return port
+        time.sleep(0.1)
 
 
 def httping_via_socks(
@@ -1709,6 +1709,7 @@ def test_socks_connection(
 ):
 
     url = "https://www.youtube.com"
+    # url = "https://www.youtube.com/s/desktop/dc7c9013/jsbin/custom-elements-es5-adapter.vflset/custom-elements-es5-adapter.js"
     proxy_url = (
         f"socks5h://{socks_proxy_host}:{port}"  # Use socks5h for remote DNS resolution
     )
@@ -1723,6 +1724,7 @@ def test_socks_connection(
         response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
         # expected_content = "Microsoft Connect Test"
         expected_content = "google"
+        # expected_content = "Polymer"
         if expected_content in response.text:
             return True
         else:
@@ -1860,7 +1862,7 @@ def connect_to_working_urls(inbound_port):
                             f"Better connection found with ping {bestPing}  - moving to it {config_to_connect[:20]}!"
                         )
                         break
-                    if test_socks_connection(port=inbound_port) and pingTime > 0:
+                    if pingTime > 0 and test_socks_connection(port=inbound_port):
                         print(
                             f"Connection working with {config_to_connect[:20]} and ping time is {pingTime:.3f} - will check again in {config_update_time} seconds"
                         )
@@ -1879,7 +1881,14 @@ def connect_to_working_urls(inbound_port):
                                 "Interrupting other thread to restart URL fetching and waiting for 3 seconds..."
                             )
                             INTERRUPT_EVENT.set()  # Signal interruption
-                        time.sleep(3)
+
+                            for i in range(1, 10):
+                                print("Interrupt sent! checking if found new config...")
+                                if len(working_urls_with_pingTime) >= 1:
+                                    break
+                                time.sleep(2)
+
+                        time.sleep(1)
                         break
         except BreakOuterLoop:
             pass  # going to second upper loop
@@ -1887,7 +1896,8 @@ def connect_to_working_urls(inbound_port):
             print(f"Error occurred: {e}")
             if current_process:
                 current_process.terminate()
-                current_process.wait(timeout=0.5)
+                time.sleep(0.5)
+                # current_process.wait(timeout=0.5)
                 print("Xray process terminated")
 
         time.sleep(1)
@@ -1899,19 +1909,28 @@ def openXray_waitToConnect(inbound_port, current_process: Popen, configJSON):
         f.write(configJSON)
     if current_process:
         current_process.terminate()
-        current_process.wait(timeout=0.5)
+        time.sleep(0.5)
+        # current_process.wait(timeout=0.5)
+
     current_process = Popen(
         [f"{nt_unix}xray", "run", "-c", f"slprj/.sb-{inbound_port}.json"],
         stdout=PIPE,
         stderr=PIPE,
     )
-    result = run_with_timeout(
-        read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
-    )
-    # read_alive_message_from_xray(current_process)
-    time.sleep(0.1)
-    if result == -1:
-        raise Exception("Timeout reading xray output in command line.")
+    # time.sleep(1)
+    read_alive_message_from_xray(current_process)
+
+    # thread1 = threading.Thread(
+    #     target=read_alive_message_from_xray, args=(current_process,)
+    # )
+    # thread1.start()
+    # thread1.join(timeout=2)
+    # result = run_with_timeout(
+    #     read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
+    # )
+
+    # if result == -1:
+    #     raise Exception("Timeout reading xray output in command line.")
     return current_process
 
 
@@ -1931,16 +1950,24 @@ def run_config_calculate_ping(url) -> float:
     current_process = Popen(
         [f"{nt_unix}xray", "run", "-c", tmpName], stdout=PIPE, stderr=PIPE
     )
+    read_alive_message_from_xray(current_process)
+    # thread1 = threading.Thread(
+    #     target=read_alive_message_from_xray, args=(current_process,)
+    # )
+    # thread1.start()
+    # thread1.join(timeout=2)
+    # current_process.terminate()
 
-    result = run_with_timeout(
-        read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
-    )
+    # time.sleep(1)
+    # result = run_with_timeout(
+    #     read_alive_message_from_xray, timeout=url_test_timeout, process=current_process
+    # )
 
-    if result == -1:
-        print("Reading xray output timeout reached!")
-        current_process.terminate()
-        remove_file(tmpName)
-        return -1
+    # if result == -1:
+    #     print("Reading xray output timeout reached!")
+    #     current_process.terminate()
+    #     remove_file(tmpName)
+    #     return -1
 
     pingtime = httping_via_socks(proxy_port=port)
     test_conn = test_socks_connection(port=port)
@@ -1953,9 +1980,15 @@ def run_config_calculate_ping(url) -> float:
 
 
 def read_alive_message_from_xray(process):
-    for line in iter(process.stdout.readline, ""):
-        if "Reading config" in line.decode("utf-8").strip():
-            break
+    def do_it(process):
+        for line in iter(process.stdout.readline, ""):
+            if "Xray" in line.decode("utf-8").strip():
+                break
+            time.sleep(0.1)
+
+    thread1 = threading.Thread(target=do_it, args=(process,))
+    thread1.start()
+    thread1.join(timeout=2)
     return 0
 
 
@@ -1981,16 +2014,14 @@ def sort_configs_by_ping(configs):
 def test_config_url(url):
     global new_urls_with_pingTimes, connection_count
 
-    pingtime = run_with_timeout(
-        run_config_calculate_ping, timeout=url_test_timeout * 3, url=url
-    )
-
-    # pingtime = run_config_calculate_ping(url)
+    # pingtime = run_with_timeout(
+    #     run_config_calculate_ping, timeout=url_test_timeout * 3, url=url
+    # )
+    pingtime = run_config_calculate_ping(url)
     connection_count += 1
     if pingtime > 0:
-        with THRD_LOCK:
-            new_urls_with_pingTimes[url] = pingtime
-            # print(f"new url with ping time {url} : {pingtime}")
+        new_urls_with_pingTimes[url] = pingtime
+        # print(f"new url with ping time {url} : {pingtime}")
     else:
         return False
     return True
