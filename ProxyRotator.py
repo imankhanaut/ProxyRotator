@@ -1708,8 +1708,8 @@ def test_socks_connection(
     socks_proxy_host="127.0.0.1", port=10800, timeout=url_test_timeout
 ):
 
-    url = "https://www.youtube.com"
-    # url = "https://www.youtube.com/s/desktop/dc7c9013/jsbin/custom-elements-es5-adapter.vflset/custom-elements-es5-adapter.js"
+    # url = "https://www.youtube.com"
+    url = "https://www.youtube.com/s/desktop/dc7c9013/jsbin/custom-elements-es5-adapter.vflset/custom-elements-es5-adapter.js"
     proxy_url = (
         f"socks5h://{socks_proxy_host}:{port}"  # Use socks5h for remote DNS resolution
     )
@@ -1723,8 +1723,8 @@ def test_socks_connection(
         response = requests.get(url, proxies=proxies, timeout=timeout)
         response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
         # expected_content = "Microsoft Connect Test"
-        expected_content = "google"
-        # expected_content = "Polymer"
+        # expected_content = "google"
+        expected_content = "Polymer"
         if expected_content in response.text:
             return True
         else:
